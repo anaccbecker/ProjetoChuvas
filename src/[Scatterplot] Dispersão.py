@@ -7,157 +7,49 @@ Created on Mon Feb  6 10:22:28 2023
 """
 
 
+def disp_plot (df_path, x, y):
+    df = pd.read_csv(df_path).pivot(index=['time','codigo'],columns='variable',values='value')
+    df.reset_index(inplace=True)
+    for i in range(0,len(sim)):
+            df_est = df[df['codigo']== sim.codigo[i]]
+            vmax = max(np.max(df_est[x]),np.max(df_est[y]))+20
+            fig = px.scatter(df_est, 
+                          x=x, 
+                          y=y, 
+                          title = f'Estação {str(sim.codigo[i])} - {str(sim.nome[i])}',
+                          labels = {
+                              "x": f"Chuva horária {x} (mm)",
+                              "y": f"Chuva horária {y} (mm)"},
+                         template = "plotly_white")
+            fig.add_shape(type = 'line',
+                          x0 = 0,
+                          y0 = 0,
+                          x1 = vmax,
+                          y1 = vmax,
+                          line = dict(color='black',),
+                          xref = 'x',
+                          yref = 'y'
+                          )
+            if not os.path.isdir(f'html/[Scatterplot] Dispersão horária ({x}-{y})'):
+                os.makedirs(f'html/[Scatterplot] Dispersão horária ({x}-{y})')
+            fig.write_html(f'html/[Scatterplot] Dispersão horária ({x}-{y})/{sim.codigo[i]}.html')
 
 
-# Dispersão horária
-#%%
-df = pd.read_csv('csv/[H] s j.csv').pivot(index=['time','codigo'],columns='variable',values='value')
-df.reset_index(inplace=True)
-for i in range(0,len(sim)):
-        df_est = df[df['codigo']== sim.codigo[i]]
-        vmax = max(np.max(df_est['JAXA']),np.max(df_est['Simepar']))+20
-        fig = px.scatter(df_est, 
-                      x='JAXA', 
-                      y="Simepar", 
-                      title = f'Estação {str(sim.codigo[i])} - {str(sim.nome[i])}',
-                      labels = {
-                          "JAXA": "Chuva horária JAXA (mm)",
-                          "Simepar": "Chuva horária Simepar (mm)"},
-                     template = "plotly_white")
-        fig.add_shape(type = 'line',
-                      x0 = 0,
-                      y0 = 0,
-                      x1 = vmax,
-                      y1 = vmax,
-                      line = dict(color='black',),
-                      xref = 'x',
-                      yref = 'y'
-                      )
-        fig.write_html(f'html/[Scatterplot] Dispersão horária (Simepar-JAXA)/{sim.codigo[i]}.html')
-        
-        
-# Dispersao Diaria (Simepar-JAXA)
-#%%
+# nomes: 'CPC', 'Simepar', 'gsmap_now', 'gsmap_nrt'
 
-df = pd.read_csv('csv/[D] s j c.csv').pivot(index=['time','codigo'],columns='variable',values='value')
-df.reset_index(inplace=True)
+# Dispersões horárias
+disp_plot('csv/[H] s j.csv', 'Simepar','gsmap_now')
+disp_plot('csv/[H] s j.csv', 'Simepar','gsmap_nrt')
+disp_plot('csv/[H] s j.csv', 'gsmap_now','gsmap_nrt')
 
-
-for i in range(0,len(sim)):
-        df_est = df[df['codigo']== sim.codigo[i]]
-        vmax = max(np.max(df_est['JAXA']),np.max(df_est['Simepar']))+20
-        fig = px.scatter(df_est, 
-                      x='JAXA', 
-                      y="Simepar", 
-                      title = f'Estação {str(sim.codigo[i])} - {str(sim.nome[i])}',
-                      labels = {
-                          "JAXA": "Chuva diária JAXA (mm)",
-                          "Simepar": "Chuva diária Simepar (mm)"},
-                     template = "plotly_white")
-        fig.add_shape(type = 'line',
-                      x0 = 0,
-                      y0 = 0,
-                      x1 = vmax,
-                      y1 = vmax,
-                      line = dict(color='black',),
-                      xref = 'x',
-                      yref = 'y'
-                      )
-        fig.write_html(f'html/[Scatterplot] Dispersão diária (Simepar-JAXA)/{sim.codigo[i]}.html')
-        
-        
-# Dispersao Mensal (Simepar-JAXA)
-#%%
-
-df = pd.read_csv('csv/[M] s j c.csv').pivot(index=['time','codigo'],columns='variable',values='value')
-df.reset_index(inplace=True)
-
-
-for i in range(0,len(sim)):
-        df_est = df[df['codigo']== sim.codigo[i]]
-        vmax = max(np.max(df_est['JAXA']),np.max(df_est['Simepar']))+20
-        fig = px.scatter(df_est, 
-                      x='JAXA', 
-                      y="Simepar", 
-                      title = f'Estação {str(sim.codigo[i])} - {str(sim.nome[i])}',
-                      labels = {
-                          "JAXA": "Chuva mensal JAXA (mm)",
-                          "Simepar": "Chuva mensal Simepar (mm)"},
-                     template = "plotly_white")
-        fig.add_shape(type = 'line',
-                      x0 = 0,
-                      y0 = 0,
-                      x1 = vmax,
-                      y1 = vmax,
-                      line = dict(color='black',),
-                      xref = 'x',
-                      yref = 'y'
-                      )
-        fig.write_html(f'html/[Scatterplot] Dispersão mensal (Simepar-JAXA)/{sim.codigo[i]}.html')
-   
-        
-# Dispersao Diaria (Simepar-CPC)
-#%%
-
-df = pd.read_csv('csv/[D] s j c.csv').pivot(index=['time','codigo'],columns='variable',values='value')
-df.reset_index(inplace=True)
-
-
-for i in range(0,len(sim)):
-        df_est = df[df['codigo']== sim.codigo[i]]
-        vmax = max(np.max(df_est['CPC']),np.max(df_est['Simepar']))+20
-        fig = px.scatter(df_est, 
-                      x='CPC', 
-                      y="Simepar", 
-                      title = f'Estação {str(sim.codigo[i])} - {str(sim.nome[i])}',
-                      labels = {
-                          "CPC": "Chuva diária CPC (mm)",
-                          "Simepar": "Chuva diária Simepar (mm)"},
-                     template = "plotly_white")
-        fig.add_shape(type = 'line',
-                      x0 = 0,
-                      y0 = 0,
-                      x1 = vmax,
-                      y1 = vmax,
-                      line = dict(color='black',),
-                      xref = 'x',
-                      yref = 'y'
-                      )
-        fig.write_html(f'html/[Scatterplot] Dispersão diária (Simepar-CPC)/{sim.codigo[i]}.html')
-        
-        
-# Dispersao Mensal (Simepar-JAXA)
-#%%
-
-df = pd.read_csv('csv/[M] s j c.csv').pivot(index=['time','codigo'],columns='variable',values='value')
-df.reset_index(inplace=True)
-
-
-for i in range(0,len(sim)):
-        df_est = df[df['codigo']== sim.codigo[i]]
-        vmax = max(np.max(df_est['CPC']),np.max(df_est['Simepar']))+20
-        fig = px.scatter(df_est, 
-                      x='CPC', 
-                      y="Simepar", 
-                      title = f'Estação {str(sim.codigo[i])} - {str(sim.nome[i])}',
-                      labels = {
-                          "CPC": "Chuva mensal CPC (mm)",
-                          "Simepar": "Chuva mensal Simepar (mm)"},
-                     template = "plotly_white")
-        fig.add_shape(type = 'line',
-                      x0 = 0,
-                      y0 = 0,
-                      x1 = vmax,
-                      y1 = vmax,
-                      line = dict(color='black',),
-                      xref = 'x',
-                      yref = 'y'
-                      )
-        fig.write_html(f'html/[Scatterplot] Dispersão mensal (Simepar-CPC)/{sim.codigo[i]}.html')
-
-
-
-
-
-
-
+# Dispersões diárias
+disp_plot('csv/[D] s j c.csv', 'Simepar','gsmap_now')
+disp_plot('csv/[D] s j c.csv', 'Simepar','gsmap_nrt')
+disp_plot('csv/[D] s j c.csv', 'gsmap_now','gsmap_nrt')   
+disp_plot('csv/[D] s j c.csv', 'Simepar','CPC')
+    
+# Dispersões mensais
+disp_plot('csv/[M] s j c.csv', 'Simepar','gsmap_now')
+disp_plot('csv/[M] s j c.csv', 'Simepar','gsmap_nrt')
+disp_plot('csv/[M] s j c.csv', 'gsmap_now','gsmap_nrt')   
+disp_plot('csv/[M] s j c.csv', 'Simepar','CPC')
