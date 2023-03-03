@@ -5,7 +5,8 @@ Created on Fri Mar  3 13:38:24 2023
 
 @author: ana.becker
 """
-
+# Funções
+#%%
 def distance_matrix(x0, y0, x1, y1):
     """ Make a distance matrix between pairwise observations.
     Note: from <http://stackoverflow.com/questions/1871536> 
@@ -38,12 +39,9 @@ def simple_idw(x, y, z, xi, yi, power=1):
     # Multiply the weights for each interpolated point by all observed Z-values
     return np.dot(weights.T, z)
 
+# Dados do satélite
+#%%
 
-
-
-############ Estações do simepar ############
-sim = pd.read_csv('data/estacoes.csv')[['codigo','latitude','longitude']]
-sim.reset_index(drop=True, inplace=True)
 
 
 times = xr.open_dataset('data/dados-processados/gsmap-nrt/201901.nc').time.to_dataframe().reset_index(drop=True)
@@ -105,14 +103,13 @@ plt.imshow(
     #interpolation='gaussian',
     origin="lower")
 plt.colorbar()
+plt.title("")
 
 
 
 
-#### simepar
-
+# Dados do Simepar
 #%%
-
 
 
 ############ Estações do simepar ############
@@ -130,46 +127,40 @@ for f in csv_files:
 psim['codigo'] = psim['codigo'].astype(int)
 
 
-# lendo e inserindo as coordenadas do inventário das estacoes
-
-# para o join funcionar, a coluna de interesse deve ser setada como index
 psim = psim.set_index('codigo').join(sim.set_index('codigo'), on='codigo', how='left')
 psim.reset_index(inplace=True)
-psim = psim[psim['datahora']==psim['datahora'][77]]
 
 
-  
+for i in range(len(times)):
+    psim_i = psim[psim['datahora']==psim['datahora'][i]]
+    x = psim_i.longitude
+    y = psim_i.latitude
+    z = psim_i.chuva_mm
+    xi = psat.lon.unique()
+    yi = psat.lat.unique()
     
-x = psim.longitude
-y = psim.latitude
-z = psim.chuva_mm
-xi = psat.lon.unique()
-yi = psat.lat.unique()
-
-
-
-nx, ny = psat.lon.nunique(), psat.lat.nunique() 
-xi = np.linspace(x.min(), x.max(), nx)
-yi = np.linspace(y.min(), y.max(), ny)
-
-# generate grid 
-xi, yi = np.meshgrid(xi, yi)
-
-# colapse grid into 1D
-xi, yi = xi.flatten(), yi.flatten()
-
-# Calculate IDW
-grid2 = simple_idw(x, y, z, xi, yi, power=2)
-grid2 = grid2.reshape((ny, nx))
-
-plt.figure(figsize=(15,10))
-plt.imshow(
-    grid2,
-    extent=(x.min(), x.max(), y.min(), y.max()),
-    cmap='rainbow',
-    #interpolation='gaussian',
-    origin="lower")
-plt.colorbar()
+    nx, ny = psat.lon.nunique(), psat.lat.nunique() 
+    xi = np.linspace(x.min(), x.max(), nx)
+    yi = np.linspace(y.min(), y.max(), ny)
+    
+    # generate grid 
+    xi, yi = np.meshgrid(xi, yi)
+    
+    # colapse grid into 1D
+    xi, yi = xi.flatten(), yi.flatten()
+    
+    # Calculate IDW
+    grid2 = simple_idw(x, y, z, xi, yi, power=2)
+    grid2 = grid2.reshape((ny, nx))
+    
+    plt.figure(figsize=(15,10))
+    plt.imshow(
+        grid2,
+        extent=(x.min(), x.max(), y.min(), y.max()),
+        cmap='rainbow',
+        #interpolation='gaussian',
+        origin="lower")
+    plt.colorbar()
 
 
 (grid1-grid2).max()
@@ -180,6 +171,6 @@ plt.imshow(
     grid1-grid2,
     extent=(x.min(), x.max(), y.min(), y.max()),
     cmap='rainbow',
-    #interpolation='gaussian',
+    interpolation='gaussian',
     origin="lower")
 plt.colorbar()

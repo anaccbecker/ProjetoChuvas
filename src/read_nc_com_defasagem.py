@@ -56,11 +56,12 @@ for k in range(0,len(sim)): # para cada estacao do simepar
     dist = xr_nc[['lat','lon']].drop_duplicates(subset=['lat','lon'])
     dist['d']= dist.apply(lambda x: geoDist([x['lat'], x['lon']],[sim.latitude[k], sim.longitude[k]]), axis=1)
     selecao = dist[dist['d']<=20]
-    selecao['pond'] = selecao.apply(lambda x: x['d']/selecao['d'].sum(), axis=1)
-    
+    #selecao['pond'] = selecao.apply(lambda x: x['d']/selecao['d'].sum(), axis=1)
+    selecao['idw'] = selecao.apply(lambda x: 1/(x['d']**2), axis=1)
+    selecao['idw'] /= selecao['idw'].sum()
     chuvas = pd.merge(xr_nc,selecao)
-    chuvas['chuva'] = chuvas.apply(lambda x: x['prate']*x['pond'], axis=1)
-    chuvas_space = chuvas.groupby(['lat','lon','time']).agg({'chuva':np.mean}).reset_index()
+    chuvas['chuva'] = chuvas.apply(lambda x: x['prate']*x['idw'], axis=1)
+    chuvas_space = chuvas.groupby(['lat','lon','time']).agg({'chuva':np.sum}).reset_index()
     chuvas_space['chuva2']=None
     latlongs = chuvas_space.drop_duplicates(subset=['lat','lon'])[['lat','lon']].reset_index(drop=True)
     
@@ -96,6 +97,15 @@ for k in range(0,len(sim)): # para cada estacao do simepar
         chuvas_time = pd.concat([chuvas_time, chuva_est])
     psat = pd.concat([psat,chuvas_time])
 
+psat['chuva3']=None
+psat.reset_index(inplace=True, drop=True)
+for i in range(len(psat)):
+    if (psat.chuva2[i] == None):
+        psat.chuva3[i] = None
+    elif (psat.chuva2[i] < 0.05):
+        psat.chuva3[i] = 0
+    elif(psat.chuva2[i] >= 0.05):
+        psat.chuva3[i] = psat.chuva2[i]
 
 psat.to_csv("csv/[TimeSpace]gsmap-nrt.csv")
     
