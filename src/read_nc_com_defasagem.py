@@ -117,7 +117,7 @@ for f in nc_files:
     psat_todos = pd.concat([psat_todos,psat])
     
 
-psat.to_csv("csv/[TimeSpace]gsmap-nrt.csv")
+psat_todos.to_csv("csv/[TimeSpace]gsmap-nrt.csv")
     
 
 
