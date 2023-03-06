@@ -7,7 +7,7 @@ Created on Tue Feb  7 15:44:27 2023
 """
 
 
-df = pd.read_csv('csv/[H] s j.csv').pivot(index=['time','codigo'],columns='variable',values='value')
+df = pd.read_csv("csv/[TimeSpace]gsmap-nrt.csv").pivot(index=['time','codigo'],columns='variable',values='value')
 df.reset_index(inplace=True)
 df['time'] = pd.to_datetime(df['time'], format='%Y-%m-%d %H:%M:%S')
 df['caso']=None

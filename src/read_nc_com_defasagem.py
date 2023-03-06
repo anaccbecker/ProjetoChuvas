@@ -5,6 +5,15 @@ Created on Fri Feb  3 13:44:32 2023
 
 @author: ana.becker
 """
+
+import warnings
+warnings.filterwarnings("ignore")
+
+
+# Funções
+#%%
+
+# Cáluculo da distância entre dois pontos
 def geoDist (x, y):
     rad = math.pi / 180
     a1 = x[0] * rad
@@ -19,103 +28,110 @@ def geoDist (x, y):
     d = R * c
     return(d)
 
-############ Estações do simepar ############
-sim = pd.read_csv('data/estacoes.csv')[['codigo','latitude','longitude']]
-sim.reset_index(drop=True, inplace=True)
-
-## apenas leitura dos ncs
-
-
+# Leitura dos NetCDFs
 def read_nc (path):
     nc_files = glob.glob(os.path.join(path,"*.nc"))
-    df_est = pd.DataFrame()
+    df_mes = pd.DataFrame()
     psat = pd.DataFrame()
     for f in nc_files:
         df_mes = xr.open_dataset(f).prate.to_dataframe()
-    psat = pd.concat([psat,df_mes])
+        psat = pd.concat([psat,df_mes])
     return(psat)
-    
-    
+  
+# Leitura dos dados
+#%%
+
+# Estações do simepar
+sim = pd.read_csv('data/estacoes.csv')[['codigo','latitude','longitude']]
+sim.reset_index(drop=True, inplace=True)
+
+
+# Dados de satélite  
 now = read_nc('data/dados-processados/gsmap-now').reset_index()
 nrt = read_nc('data/dados-processados/gsmap-nrt').reset_index()
 
 
-import warnings
-warnings.filterwarnings("ignore")
-
-
+# Pesos da interpolação temporal
 p1=0.5
 p2=0.2
 p3=0.05
 
-psat = pd.DataFrame()    
-for k in range(0,len(sim)): # para cada estacao do simepar
-    print('estacao '+ str(sim.codigo[k]) )
-    
-    xr_nc = nrt
-    dist = xr_nc[['lat','lon']].drop_duplicates(subset=['lat','lon'])
-    dist['d']= dist.apply(lambda x: geoDist([x['lat'], x['lon']],[sim.latitude[k], sim.longitude[k]]), axis=1)
-    selecao = dist[dist['d']<=20]
-    #selecao['pond'] = selecao.apply(lambda x: x['d']/selecao['d'].sum(), axis=1)
-    selecao['idw'] = selecao.apply(lambda x: 1/(x['d']**2), axis=1)
-    selecao['idw'] /= selecao['idw'].sum()
-    chuvas = pd.merge(xr_nc,selecao)
-    chuvas['chuva'] = chuvas.apply(lambda x: x['prate']*x['idw'], axis=1)
-    chuvas_space = chuvas.groupby(['lat','lon','time']).agg({'chuva':np.sum}).reset_index()
-    chuvas_space['chuva2']=None
-    latlongs = chuvas_space.drop_duplicates(subset=['lat','lon'])[['lat','lon']].reset_index(drop=True)
-    
-    chuvas_time = pd.DataFrame()
-    
-    for j in range(len(latlongs)): #para cada grupo de estacoes proximas
-        chuva_est = chuvas_space[(chuvas_space.lat==latlongs.lat[j]) & (chuvas_space.lon==latlongs.lon[j])].reset_index(drop=True)
-        for i in range(len(chuva_est)):
-            try: 
-                a = chuva_est.chuva[i-2]
-            except:
-                a = None
-            try:
-                b = chuva_est.chuva[i-1]
-            except:
-                b = None
-            try:
-                c = chuva_est.chuva[i]
-            except:
-                c = None
-            try:
-                d = chuva_est.chuva[i+1]
-            except:
-                d = None
-            try:
-                e = chuva_est.chuva[i+2]
-            except:
-                e = None
-            try:
-                chuva_est.chuva2[i] = a*p3+b*p2+c*p1+d*p2+e*p3
-            except:
-                chuva_est.chuva2[i] = None
-        chuvas_time = pd.concat([chuvas_time, chuva_est])
-    psat = pd.concat([psat,chuvas_time])
 
-psat['chuva3']=None
-psat.reset_index(inplace=True, drop=True)
-for i in range(len(psat)):
-    if (psat.chuva2[i] == None):
-        psat.chuva3[i] = None
-    elif (psat.chuva2[i] < 0.05):
-        psat.chuva3[i] = 0
-    elif(psat.chuva2[i] >= 0.05):
-        psat.chuva3[i] = psat.chuva2[i]
+# Loop para cálculo das chuvas para cada estação considerando o método idw para a defasagem espacial 
+# e o sistema de pesos para a defasagem temporal
+#%%
+path = 'data/dados-processados/gsmap-nrt'
+nc_files = glob.glob(os.path.join(path,"*.nc"))
+psat_todos = pd.DataFrame()
+for f in nc_files:
+    print(f)
+    xr_nc = xr.open_dataset(f).prate.to_dataframe().reset_index()
+    psat = pd.DataFrame()   
+    dist = xr_nc[['lat','lon']].drop_duplicates(subset=['lat','lon'])
+    
+    for k in range(len(sim)): # para cada estacao do simepar
+        print('estacao '+ str(sim.codigo[k]) )
+        dist['d']= dist.apply(lambda x: geoDist([x['lat'], x['lon']],[sim.latitude[k], sim.longitude[k]]), axis=1)
+        selecao = dist[dist['d']<=30]
+        selecao['idw'] = selecao.apply(lambda x: 1/(x['d']**2), axis=1)
+        selecao['idw'] /= selecao['idw'].sum()
+        chuvas = pd.merge(xr_nc,selecao)
+        chuvas['chuva'] = chuvas.apply(lambda x: x['prate']*x['idw'], axis=1)
+        chuvas['chuva_time']=None
+        latlongs = chuvas.drop_duplicates(subset=['lat','lon'])[['lat','lon']].reset_index(drop=True)
+        chuvas_time = pd.DataFrame()
+        
+        for j in range(len(latlongs)): #para cada grupo de estacoes proximas
+            chuva_est = chuvas[(chuvas.lat==latlongs.lat[j]) & (chuvas.lon==latlongs.lon[j])].reset_index(drop=True)
+            for i in range(len(chuva_est)):
+                try: 
+                    a = chuva_est.chuva[i-2]
+                except:
+                    a = None
+                try:
+                    b = chuva_est.chuva[i-1]
+                except:
+                    b = None
+                try:
+                    c = chuva_est.chuva[i]
+                except:
+                    c = None
+                try:
+                    d = chuva_est.chuva[i+1]
+                except:
+                    d = None
+                try:
+                    e = chuva_est.chuva[i+2]
+                except:
+                    e = None
+                try:
+                    chuva_est.chuva_time[i] = a*p3+b*p2+c*p1+d*p2+e*p3
+                except:
+                    chuva_est.chuva_time[i] = None
+            chuvas_time = pd.concat([chuvas_time, chuva_est])
+        chuvas_time['codigo'] = sim.codigo[k]
+        psat = pd.concat([psat,chuvas_time])
+    
+    psat.drop(columns = ['chuva','prate', 'd', 'idw'], inplace = True)
+    psat.chuva_time[psat.chuva_time< 0.05] = 0
+    psat_todos = pd.concat([psat_todos,psat])
+    
 
 psat.to_csv("csv/[TimeSpace]gsmap-nrt.csv")
     
 
 
+# Mapa
+#%%
+parana = gpd.read_file("gpkg/parana.gpkg")
 
-
-
-    
-
+plt.figure(figsize=(30,20))
+parana.plot(color='white', edgecolor='gray', linewidth = 0.5)
+plt.scatter(sim.longitude,sim.latitude, s =650, facecolors='none', edgecolors='r', marker = 'o')
+plt.scatter(psat.lon,psat.lat, s =0.01, marker = "o")
+plt.scatter(sim.longitude,sim.latitude, s =1, c = 'red', marker = "D")
+plt.tick_params(axis='both', labelsize=7)
+plt.savefig('img/Distribuição espacial.png', dpi = 400)
 
 
 
