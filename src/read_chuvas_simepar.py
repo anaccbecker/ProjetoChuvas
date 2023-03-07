@@ -12,8 +12,8 @@ path = os.getcwd()+'/data/Chuvas-simepar'
 csv_files = glob.glob(os.path.join(path, "*.csv"))
 psim = pd.DataFrame()
 for f in csv_files:
-    df_est = pd.read_csv(f)
-    df_est['codigo'] = f.split("/")[-1].split("_")[0]
+    df_est = pd.read_csv(f, skiprows = 1)
+    df_est['codigo'] = f.split("/")[-1].split(".")[0]
     psim = pd.concat([psim,df_est])    
 psim['codigo'] = psim['codigo'].astype(int)
 

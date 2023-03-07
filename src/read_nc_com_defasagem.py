@@ -29,14 +29,14 @@ def geoDist (x, y):
     return(d)
 
 # Leitura dos NetCDFs
-def read_nc (path):
-    nc_files = glob.glob(os.path.join(path,"*.nc"))
-    df_mes = pd.DataFrame()
-    psat = pd.DataFrame()
-    for f in nc_files:
-        df_mes = xr.open_dataset(f).prate.to_dataframe()
-        psat = pd.concat([psat,df_mes])
-    return(psat)
+# def read_nc (path):
+#     nc_files = glob.glob(os.path.join(path,"*.nc"))
+#     df_mes = pd.DataFrame()
+#     psat = pd.DataFrame()
+#     for f in nc_files:
+#         df_mes = xr.open_dataset(f).prate.to_dataframe()
+#         psat = pd.concat([psat,df_mes])
+#     return(psat)
   
 # Leitura dos dados
 #%%
@@ -47,8 +47,8 @@ sim.reset_index(drop=True, inplace=True)
 
 
 # Dados de satélite  
-now = read_nc('data/dados-processados/gsmap-now').reset_index()
-nrt = read_nc('data/dados-processados/gsmap-nrt').reset_index()
+# now = read_nc('data/dados-processados/gsmap-now').reset_index()
+# nrt = read_nc('data/dados-processados/gsmap-nrt').reset_index()
 
 
 # Pesos da interpolação temporal
@@ -77,42 +77,40 @@ for f in nc_files:
         selecao['idw'] /= selecao['idw'].sum()
         chuvas = pd.merge(xr_nc,selecao)
         chuvas['chuva'] = chuvas.apply(lambda x: x['prate']*x['idw'], axis=1)
+        chuvas = chuvas.groupby(['time']).agg({'chuva':np.sum}).reset_index()
         chuvas['chuva_time']=None
-        latlongs = chuvas.drop_duplicates(subset=['lat','lon'])[['lat','lon']].reset_index(drop=True)
+        latlongs = xr_nc[['lat','lon']].drop_duplicates(subset=['lat','lon']).reset_index(drop=True)
         chuvas_time = pd.DataFrame()
         
-        for j in range(len(latlongs)): #para cada grupo de estacoes proximas
-            chuva_est = chuvas[(chuvas.lat==latlongs.lat[j]) & (chuvas.lon==latlongs.lon[j])].reset_index(drop=True)
-            for i in range(len(chuva_est)):
-                try: 
-                    a = chuva_est.chuva[i-2]
-                except:
-                    a = None
-                try:
-                    b = chuva_est.chuva[i-1]
-                except:
-                    b = None
-                try:
-                    c = chuva_est.chuva[i]
-                except:
-                    c = None
-                try:
-                    d = chuva_est.chuva[i+1]
-                except:
-                    d = None
-                try:
-                    e = chuva_est.chuva[i+2]
-                except:
-                    e = None
-                try:
-                    chuva_est.chuva_time[i] = a*p3+b*p2+c*p1+d*p2+e*p3
-                except:
-                    chuva_est.chuva_time[i] = None
-            chuvas_time = pd.concat([chuvas_time, chuva_est])
-        chuvas_time['codigo'] = sim.codigo[k]
-        psat = pd.concat([psat,chuvas_time])
+        for i in range(len(chuvas)):
+            try: 
+                a = chuvas.chuva[i-2]
+            except:
+                a = None
+            try:
+                b = chuvas.chuva[i-1]
+            except:
+                b = None
+            try:
+                c = chuvas.chuva[i]
+            except:
+                c = None
+            try:
+                d = chuvas.chuva[i+1]
+            except:
+                d = None
+            try:
+                e = chuvas.chuva[i+2]
+            except:
+                e = None
+            try:
+                chuvas.chuva_time[i] = a*p3+b*p2+c*p1+d*p2+e*p3
+            except:
+                chuvas.chuva_time[i] = None
+        chuvas['codigo'] = sim.codigo[k]
+        psat = pd.concat([psat,chuvas])
     
-    psat.drop(columns = ['chuva','prate', 'd', 'idw'], inplace = True)
+    psat.drop(columns = ['chuva'], inplace = True)
     psat.chuva_time[psat.chuva_time< 0.05] = 0
     psat_todos = pd.concat([psat_todos,psat])
     

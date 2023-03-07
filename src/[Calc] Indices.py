@@ -5,9 +5,17 @@ Created on Tue Feb  7 15:44:27 2023
 
 @author: ana.becker
 """
+psat_todos = pd.read_csv("csv/[TimeSpace]gsmap-nrt.csv")
+psat_todos = psat_todos[['time','codigo','chuva_time']].rename({ 'chuva_time': 'chuva'}, axis='columns')
+psat_todos['fonte']= 'JAXA'
+
+psim = psim.reset_index()[['hordatahora','codigo','precipitacao(mm)']].rename({'hordatahora': 'time', 'precipitacao(mm)': 'chuva'}, axis='columns')
+psim['fonte']= 'Simepar'
 
 
-df = pd.read_csv("csv/[TimeSpace]gsmap-nrt.csv").pivot(index=['time','codigo'],columns='variable',values='value')
+
+# parei aqui - estava dando erro correção das duplicatas
+df = pd.concat([psat_todos, psim]).pivot(index=['time','codigo'],columns='fonte',values='chuva')
 df.reset_index(inplace=True)
 df['time'] = pd.to_datetime(df['time'], format='%Y-%m-%d %H:%M:%S')
 df['caso']=None
