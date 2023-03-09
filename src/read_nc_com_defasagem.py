@@ -62,60 +62,62 @@ p3=0.05
 #%%
 path = 'data/dados-processados/gsmap-nrt'
 nc_files = glob.glob(os.path.join(path,"*.nc"))
-psat_todos = pd.DataFrame()
-for f in nc_files:
-    print(f)
-    xr_nc = xr.open_dataset(f).prate.to_dataframe().reset_index()
-    psat = pd.DataFrame()   
-    dist = xr_nc[['lat','lon']].drop_duplicates(subset=['lat','lon'])
-    
-    for k in range(len(sim)): # para cada estacao do simepar
-        print('estacao '+ str(sim.codigo[k]) )
-        dist['d']= dist.apply(lambda x: geoDist([x['lat'], x['lon']],[sim.latitude[k], sim.longitude[k]]), axis=1)
-        selecao = dist[dist['d']<=30]
-        selecao['idw'] = selecao.apply(lambda x: 1/(x['d']**2), axis=1)
-        selecao['idw'] /= selecao['idw'].sum()
-        chuvas = pd.merge(xr_nc,selecao)
-        chuvas['chuva'] = chuvas.apply(lambda x: x['prate']*x['idw'], axis=1)
-        chuvas = chuvas.groupby(['time']).agg({'chuva':np.sum}).reset_index()
-        chuvas['chuva_time']=None
-        latlongs = xr_nc[['lat','lon']].drop_duplicates(subset=['lat','lon']).reset_index(drop=True)
-        chuvas_time = pd.DataFrame()
-        
-        for i in range(len(chuvas)):
-            try: 
-                a = chuvas.chuva[i-2]
-            except:
-                a = None
-            try:
-                b = chuvas.chuva[i-1]
-            except:
-                b = None
-            try:
-                c = chuvas.chuva[i]
-            except:
-                c = None
-            try:
-                d = chuvas.chuva[i+1]
-            except:
-                d = None
-            try:
-                e = chuvas.chuva[i+2]
-            except:
-                e = None
-            try:
-                chuvas.chuva_time[i] = a*p3+b*p2+c*p1+d*p2+e*p3
-            except:
-                chuvas.chuva_time[i] = None
-        chuvas['codigo'] = sim.codigo[k]
-        psat = pd.concat([psat,chuvas])
-    
-    psat.drop(columns = ['chuva'], inplace = True)
-    psat.chuva_time[psat.chuva_time< 0.05] = 0
-    psat_todos = pd.concat([psat_todos,psat])
-    
 
-psat_todos.to_csv("csv/[TimeSpace]gsmap-nrt.csv")
+for j in [0.05,0.5,1]:
+    psat_todos = pd.DataFrame()
+    for f in nc_files:
+        print(f)
+        xr_nc = xr.open_dataset(f).prate.to_dataframe().reset_index()
+        psat = pd.DataFrame()   
+        dist = xr_nc[['lat','lon']].drop_duplicates(subset=['lat','lon'])
+        
+        for k in range(len(sim)): # para cada estacao do simepar
+            print('estacao '+ str(sim.codigo[k]) )
+            dist['d']= dist.apply(lambda x: geoDist([x['lat'], x['lon']],[sim.latitude[k], sim.longitude[k]]), axis=1)
+            selecao = dist[dist['d']<=30]
+            selecao['idw'] = selecao.apply(lambda x: 1/(x['d']**2), axis=1)
+            selecao['idw'] /= selecao['idw'].sum()
+            chuvas = pd.merge(xr_nc,selecao)
+            chuvas['chuva'] = chuvas.apply(lambda x: x['prate']*x['idw'], axis=1)
+            chuvas = chuvas.groupby(['time']).agg({'chuva':np.sum}).reset_index()
+            chuvas['chuva_time']=None
+            latlongs = xr_nc[['lat','lon']].drop_duplicates(subset=['lat','lon']).reset_index(drop=True)
+            chuvas_time = pd.DataFrame()
+            
+            for i in range(len(chuvas)):
+                try: 
+                    a = chuvas.chuva[i-2]
+                except:
+                    a = None
+                try:
+                    b = chuvas.chuva[i-1]
+                except:
+                    b = None
+                try:
+                    c = chuvas.chuva[i]
+                except:
+                    c = None
+                try:
+                    d = chuvas.chuva[i+1]
+                except:
+                    d = None
+                try:
+                    e = chuvas.chuva[i+2]
+                except:
+                    e = None
+                try:
+                    chuvas.chuva_time[i] = a*p3+b*p2+c*p1+d*p2+e*p3
+                except:
+                    chuvas.chuva_time[i] = None
+            chuvas['codigo'] = sim.codigo[k]
+            psat = pd.concat([psat,chuvas])
+        
+        psat.drop(columns = ['chuva'], inplace = True)
+        psat.chuva_time[psat.chuva_time< j] = 0
+        psat_todos = pd.concat([psat_todos,psat])
+        
+    
+    psat_todos.to_csv(f'csv/[TimeSpace]gsmap-nrt-{j}mm.csv')
     
 
 
