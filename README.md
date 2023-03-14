@@ -10,7 +10,7 @@ FAR: False alarm ratio (0–1, with 0 being a perfect score)
 ###
 HSS: Heidke skill score (from -Inf to 1, with 1 being a perfect score)
 ###
-BIAS: Bias score (From -Inf to Inf; 1 is a perfect score
+BIAS: Bias score (From -Inf to Inf; 1 is a perfect score)
 ###
 Exemplo de resultado:
 ![alt text](https://github.com/anaccbecker/ProjetoChuvas/blob/master/img/indices.jpg?raw=true)
